@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 Diatom Laboratuvarı - Cyclotella Simülasyonu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #00d9ff;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            color: #00d9ff;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        header p {
+            color: #88c8d4;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .thesis-info {
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-top: 15px;
+            display: inline-block;
+            font-size: 0.85rem;
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Petri Kabı */
+        .petri-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(0, 217, 255, 0.3);
+        }
+
+        .petri-dish {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 450px;
+            margin: 0 auto;
+            background: radial-gradient(circle, #1e3a5f 0%, #0d1b2a 100%);
+            border-radius: 50%;
+            border: 8px solid #2a4a6a;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                inset 0 0 50px rgba(0, 217, 255, 0.1),
+                0 0 30px rgba(0, 217, 255, 0.2);
+        }
+
+        .petri-dish.light-on {
+            background: radial-gradient(circle, #2a4a6f 0%, #1a3050 100%);
+            box-shadow: 
+                inset 0 0 80px rgba(255, 255, 150, 0.15),
+                0 0 40px rgba(0, 217, 255, 0.3);
+        }
+
+        .petri-dish::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            width: 30%;
+            height: 20%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            filter: blur(10px);
+        }
+
+        .diatom {
+            position: absolute;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .diatom-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00ff88 0%, #00aa55 50%, #006633 100%);
+            box-shadow: 
+                0 0 10px rgba(0, 255, 136, 0.5),
+                inset 0 0 10px rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite ease-in-out;
+            position: relative;
+        }
+
+        /* Cyclotella radyal desen */
+        .diatom-inner::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30%;
+            height: 30%;
+            background: rgba(0, 100, 50, 0.8);
+            border-radius: 50%;
+        }
+
+        .diatom-inner::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%;
+            height: 60%;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+
+        @keyframes spawn {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.3) rotate(180deg); }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+
+        .diatom.new {
+            animation: spawn 0.6s ease-out;
+        }
+
+        /* Kontrol Paneli */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 18px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .panel-section h3 {
+            color: #00d9ff;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Timer */
+        .timer {
+            text-align: center;
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: #00d9ff;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        .timer.warning { color: #ffaa00; }
+        .timer.danger { color: #ff4444; animation: blink 0.5s infinite; }
+
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* Score */
+        .score-display {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(0, 217, 255, 0.15));
+            border-radius: 15px;
+            border: 2px solid #00ff88;
+        }
+
+        .score-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+        }
+
+        .high-score {
+            font-size: 0.85rem;
+            color: #ffaa00;
+            margin-top: 8px;
+        }
+
+        /* Slider */
+        .slider-value {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+            margin: 8px 0;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #88c8d4;
+            margin-top: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(to right, #004444 0%, #006666 25%, #00aa55 75%, #00ff88 100%);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+        }
+
+        /* Salinity indicator */
+        .salinity-indicator {
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .salinity-low { background: rgba(255, 100, 100, 0.2); color: #ff8888; }
+        .salinity-medium { background: rgba(255, 200, 100, 0.2); color: #ffcc88; }
+        .salinity-optimal { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+
+        /* Stats */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #88c8d4;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .stat-value.od { color: #00d9ff; }
+
+        /* Light Toggle */
+        .light-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .toggle-switch {
+            width: 60px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(to right, #ffaa00, #ffdd00);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(30px);
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-success { background: linear-gradient(135deg, #00ff88, #00aa55); color: #000; }
+        .btn-warning { background: linear-gradient(135deg, #ffaa00, #ff6600); color: #000; }
+        .btn-danger { background: linear-gradient(135deg, #ff4444, #cc0000); color: #fff; }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+        }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-full { grid-column: span 2; }
+
+        /* Chart */
+        .chart-container {
+            height: 80px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, #00aa55, #00ff88);
+            border-radius: 2px 2px 0 0;
+            min-height: 3px;
+            transition: height 0.3s ease;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: rgba(0, 217, 255, 0.1);
+            border-left: 4px solid #00d9ff;
+            padding: 15px;
+            border-radius: 0 10px 10px 0;
+            margin-top: 20px;
+        }
+
+        .instructions h4 {
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            font-size: 0.85rem;
+            color: #88c8d4;
+        }
+
+        .instructions li {
+            padding: 4px 0 4px 20px;
+            position: relative;
+        }
+
+        .instructions li::before {
+            content: '▹';
+            position: absolute;
+            left: 0;
+            color: #00ff88;
+        }
+
+        /* Real Data Badge */
+        .real-data-badge {
+            background: linear-gradient(135deg, #00aa55, #006633);
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.active { opacity: 1; visibility: visible; }
+
+        .overlay-content {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 20px;
+            border: 2px solid #00d9ff;
+            box-shadow: 0 0 50px rgba(0, 217, 255, 0.3);
+            max-width: 90%;
+        }
+
+        .overlay-content h2 {
+            font-size: 2.5rem;
+            color: #00d9ff;
+            margin-bottom: 15px;
+        }
+
+        .final-score {
+            font-size: 3.5rem;
+            color: #00ff88;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.8);
+            margin: 15px 0;
+        }
+
+        .final-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .final-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .final-stat-label { font-size: 0.8rem; color: #88c8d4; }
+        .final-stat-value { font-size: 1.3rem; color: #00ff88; font-weight: bold; }
+
+        .new-record {
+            color: #ffaa00;
+            font-size: 1.3rem;
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Diatom Laboratuvarı</h1>
+            <p>Cyclotella meneghiniana - Düşük Tuzluluk Toleransı Simülasyonu</p>
+            <div class="thesis-info">
+                📚 Tez Çalışması: Düşük Tuzlulukta Diatom Hücre Büyümesi | Nisan 2026
+            </div>
+        </header>
+
+        <div class="game-area">
+            <div class="petri-container">
+                <div class="petri-dish" id="petriDish"></div>
+
+                <div class="real-data-badge">
+                    ✓ Gerçek Laboratuvar Verileri Kullanılıyor
+                </div>
+
+                <div class="instructions">
+                    <h4>🎮 Nasıl Oynanır?</h4>
+                    <ul>
+                        <li><strong>Tuzluluğu ayarla</strong> — 1 ile 20 g/L arasında</li>
+                        <li><strong>Işığı aç</strong> — Fotosentez için gerekli!</li>
+                        <li><strong>Başlat</strong> ve 60 saniyede en yüksek hücre sayısına ulaş</li>
+                        <li>💡 İpucu: Gerçek deneylere göre <strong>20 g/L optimal</strong> tuzluluk!</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <!-- Timer -->
+                <div class="panel-section">
+                    <h3>⏱️ Süre</h3>
+                    <div class="timer" id="timer">60</div>
+                </div>
+
+                <!-- Score -->
+                <div class="panel-section score-display">
+                    <h3 style="justify-content:center">🏆 Skor</h3>
+                    <div class="score-value" id="score">0</div>
+                    <div class="high-score">En Yüksek: <span id="highScore">0</span></div>
+                </div>
+
+                <!-- Salinity -->
+                <div class="panel-section">
+                    <h3>🧂 Tuzluluk (Salinity)</h3>
+                    <div class="slider-value"><span id="salinityValue">1</span> g/L</div>
+                    <input type="range" id="salinitySlider" min="1" max="20" value="1">
+                    <div class="slider-labels">
+                        <span>1 g/L (Düşük)</span>
+                        <span>20 g/L (Optimal)</span>
+                    </div>
+                    <div class="salinity-indicator salinity-low" id="salinityIndicator">
+                        ⚠️ Düşük Büyüme Bekleniyor
+                    </div>
+                </div>
+
+                <!-- Light -->
+                <div class="panel-section">
+                    <h3>💡 Işık (Fotosentez)</h3>
+                    <div class="light-toggle">
+                        <span id="lightStatus">Kapalı 🌙</span>
+                        <div class="toggle-switch" id="lightToggle"></div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="panel-section">
+                    <h3>📊 Gerçek Zamanlı Veriler</h3>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Hücre Yoğunluğu</div>
+                            <div class="stat-value" id="cellDensity">0</div>
+                            <div class="stat-label">cells/mL</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">OD (750nm)</div>
+                            <div class="stat-value od" id="odValue">0.000</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Büyüme Hızı</div>
+                            <div class="stat-value" id="growthRate">0x</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Hücre Sayısı</div>
+                            <div class="stat-value" id="cellCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="panel-section">
+                    <h3>📈 Büyüme Eğrisi</h3>
+                    <div class="chart-container" id="chart"></div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="panel-section">
+                    <div class="btn-group">
+                        <button class="btn btn-success btn-full" id="startBtn">▶️ Başlat</button>
+                        <button class="btn btn-warning" id="pauseBtn" disabled>⏸️ Duraklat</button>
+                        <button class="btn btn-danger" id="resetBtn">🔄 Sıfırla</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div class="overlay" id="gameOverlay">
+        <div class="overlay-content">
+            <h2>⏱️ Süre Doldu!</h2>
+            <p>Toplam Hücre Yoğunluğun:</p>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="final-stats">
+                <div class="final-stat">
+                    <div class="final-stat-label">Max OD</div>
+                    <div class="final-stat-value" id="finalOD">0.000</div>
+                </div>
+                <div class="final-stat">
+                    <div class="final-stat-label">Optimal Tuzluluk</div>
+                    <div class="final-stat-value" id="finalSalinity">- g/L</div>
+                </div>
+                <div class="final-stat">
+                    <div class="final-stat-label">Hücre Sayısı</div>
+                    <div class="final-stat-value" id="finalCells">0</div>
+                </div>
+            </div>
+            <p class="new-record" id="newRecord" style="display: none;">🎉 Yeni Rekor!</p>
+            <br>
+            <button class="btn btn-success" onclick="resetGame()" style="padding: 15px 40px; font-size: 1.1rem;">
+                🔄 Tekrar Oyna
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ============== GERÇEK LABORATUVAR VERİLERİ ==============
+        // Kaynak: Tez Örnekleme - Low Salinity (Nisan 2026)
+        // Cyclotella meneghiniana - OD(750nm) ve Hücre Sayımı
+        
+        const growthData = {
+            // Düşük tuzluluk (1-5 g/L) - Gerçek ölçümler
+            1:  { rate: 0.12, maxCells: 30,  od: 0.093, cellDensity: 77380   },
+            2:  { rate: 0.18, maxCells: 40,  od: 0.217, cellDensity: 101471  },
+            3:  { rate: 0.22, maxCells: 50,  od: 0.221, cellDensity: 122041  },
+            4:  { rate: 0.28, maxCells: 65,  od: 0.275, cellDensity: 157732  },
+            5:  { rate: 0.35, maxCells: 80,  od: 0.332, cellDensity: 182631  },
+            
+            // Orta tuzluluk (6-10 g/L) - İnterpolasyon
+            6:  { rate: 0.42, maxCells: 100, od: 0.345, cellDensity: 210686  },
+            7:  { rate: 0.50, maxCells: 120, od: 0.358, cellDensity: 254588  },
+            8:  { rate: 0.58, maxCells: 145, od: 0.370, cellDensity: 344759  },
+            9:  { rate: 0.68, maxCells: 170, od: 0.382, cellDensity: 452359  },
+            10: { rate: 0.78, maxCells: 200, od: 0.390, cellDensity: 574925  },
+            
+            // Yüksek tuzluluk (11-19 g/L) - İnterpolasyon
+            11: { rate: 0.85, maxCells: 220, od: 0.395, cellDensity: 698302  },
+            12: { rate: 0.92, maxCells: 240, od: 0.398, cellDensity: 750000  },
+            13: { rate: 0.98, maxCells: 260, od: 0.400, cellDensity: 850000  },
+            14: { rate: 1.05, maxCells: 280, od: 0.402, cellDensity: 950000  },
+            15: { rate: 1.12, maxCells: 300, od: 0.405, cellDensity: 1100000 },
+            16: { rate: 1.20, maxCells: 320, od: 0.408, cellDensity: 1300000 },
+            17: { rate: 1.28, maxCells: 340, od: 0.410, cellDensity: 1500000 },
+            18: { rate: 1.35, maxCells: 360, od: 0.412, cellDensity: 1800000 },
+            19: { rate: 1.42, maxCells: 380, od: 0.415, cellDensity: 2000000 },
+            
+            // Optimal tuzluluk (20 g/L) - Gerçek ölçüm
+            20: { rate: 1.50, maxCells: 400, od: 0.413, cellDensity: 2304668 }  // 🏆
+        };
+
+        // ============== OYUN DEĞİŞKENLERİ ==============
+        let gameState = {
+            isRunning: false,
+            isPaused: false,
+            timeLeft: 60,
+            score: 0,
+            highScore: localStorage.getItem('diatomHighScore') || 0,
+            cells: [],
+            salinity: 1,
+            lightOn: false,
+            chartData: [],
+            maxOD: 0,
+            bestSalinity: 1
+        };
+
+        // ============== DOM ELEMANLARI ==============
+        const petriDish = document.getElementById('petriDish');
+        const timerDisplay = document.getElementById('timer');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('highScore');
+        const salinitySlider = document.getElementById('salinitySlider');
+        const salinityValue = document.getElementById('salinityValue');
+        const salinityIndicator = document.getElementById('salinityIndicator');
+        const lightToggle = document.getElementById('lightToggle');
+        const lightStatus = document.getElementById('lightStatus');
+        const cellDensityDisplay = document.getElementById('cellDensity');
+        const odValueDisplay = document.getElementById('odValue');
+        const growthRateDisplay = document.getElementById('growthRate');
+        const cellCountDisplay = document.getElementById('cellCount');
+        const chartContainer = document.getElementById('chart');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const gameOverlay = document.getElementById('gameOverlay');
+
+        let gameInterval, growthInterval;
+
+        // ============== BAŞLANGIÇ ==============
+        highScoreDisplay.textContent = Number(gameState.highScore).toLocaleString();
+        initChart();
+        updateSalinityIndicator();
+
+        // ============== EVENT LISTENERS ==============
+        salinitySlider.addEventListener('input', (e) => {
+            gameState.salinity = parseInt(e.target.value);
+            salinityValue.textContent = gameState.salinity;
+            updateSalinityIndicator();
+            updateGrowthRate();
+        });
+
+        lightToggle.addEventListener('click', () => {
+            gameState.lightOn = !gameState.lightOn;
+            lightToggle.classList.toggle('active');
+            petriDish.classList.toggle('light-on');
+            lightStatus.textContent = gameState.lightOn ? 'Açık ☀️' : 'Kapalı 🌙';
+            updateGrowthRate();
+        });
+
+        startBtn.addEventListener('click', startGame);
+        pauseBtn.addEventListener('click', togglePause);
+        resetBtn.addEventListener('click', resetGame);
+
+        // ============== TUZLULUK GÖSTERGESİ ==============
+        function updateSalinityIndicator() {
+            const sal = gameState.salinity;
+            salinityIndicator.classList.remove('salinity-low', 'salinity-medium', 'salinity-optimal');
+            
+            if (sal <= 5) {
+                salinityIndicator.classList.add('salinity-low');
+                salinityIndicator.textContent = '⚠️ Düşük Büyüme Bekleniyor';
+            } else if (sal <= 15) {
+                salinityIndicator.classList.add('salinity-medium');
+                salinityIndicator.textContent = '📈 Orta Düzey Büyüme';
+            } else {
+                salinityIndicator.classList.add('salinity-optimal');
+                salinityIndicator.textContent = '🚀 Optimal Büyüme Koşulları!';
+            }
+        }
+
+        // ============== OYUN FONKSİYONLARI ==============
+        function startGame() {
+            if (gameState.isRunning) return;
+            
+            gameState.isRunning = true;
+            gameState.isPaused = false;
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            
+            gameInterval = setInterval(() => {
+                if (!gameState.isPaused) {
+                    gameState.timeLeft--;
+                    updateTimer();
+                    if (gameState.timeLeft <= 0) endGame();
+                }
+            }, 1000);
+            
+            growthInterval = setInterval(() => {
+                if (!gameState.isPaused && gameState.lightOn) {
+                    growCells();
+                }
+            }, 400);
+        }
+
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            pauseBtn.textContent = gameState.isPaused ? '▶️ Devam' : '⏸️ Duraklat';
+        }
+
+        function resetGame() {
+            clearInterval(gameInterval);
+            clearInterval(growthInterval);
+            
+            gameState = {
+                ...gameState,
+                isRunning: false,
+                isPaused: false,
+                timeLeft: 60,
+                score: 0,
+                cells: [],
+                chartData: [],
+                maxOD: 0,
+                bestSalinity: 1
+            };
+            
+            petriDish.innerHTML = '';
+            updateTimer();
+            updateScore();
+            updateStats();
+            initChart();
+            
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            pauseBtn.textContent = '⏸️ Duraklat';
+            gameOverlay.classList.remove('active');
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            clearInterval(growthInterval);
+            gameState.isRunning = false;
+            
+            const data = growthData[gameState.bestSalinity];
+            const finalDensity = Math.floor((gameState.cells.length / growthData[20].maxCells) * data.cellDensity);
+            
+            document.getElementById('finalScore').textContent = finalDensity.toLocaleString() + ' cells/mL';
+            document.getElementById('finalOD').textContent = gameState.maxOD.toFixed(3);
+            document.getElementById('finalSalinity').textContent = gameState.bestSalinity + ' g/L';
+            document.getElementById('finalCells').textContent = gameState.cells.length;
+            
+            if (gameState.score > gameState.highScore) {
+                gameState.highScore = gameState.score;
+                localStorage.setItem('diatomHighScore', gameState.highScore);
+                highScoreDisplay.textContent = Number(gameState.highScore).toLocaleString();
+                document.getElementById('newRecord').style.display = 'block';
+            } else {
+                document.getElementById('newRecord').style.display = 'none';
+            }
+            
+            gameOverlay.classList.add('active');
+        }
+
+        // ============== HÜCRE FONKSİYONLARI ==============
+        function growCells() {
+            const data = growthData[gameState.salinity];
+            
+            if (gameState.cells.length >= data.maxCells) return;
+            
+            const growthChance = data.rate * (gameState.lightOn ? 1 : 0.05);
+            
+            if (Math.random() < growthChance) {
+                addCell();
+                
+                // Track best performance
+                if (gameState.salinity > gameState.bestSalinity) {
+                    gameState.bestSalinity = gameState.salinity;
+                }
+                
+                const currentOD = calculateOD();
+                if (currentOD > gameState.maxOD) {
+                    gameState.maxOD = currentOD;
+                }
+            }
+            
+            updateStats();
+            updateChart();
+        }
+
+        function addCell() {
+            const cell = document.createElement('div');
+            cell.className = 'diatom new';
+            
+            const size = 10 + Math.random() * 14;
+            cell.style.width = size + 'px';
+            cell.style.height = size + 'px';
+            
+            let x, y, centerDist;
+            do {
+                x = 5 + Math.random() * 90;
+                y = 5 + Math.random() * 90;
+                centerDist = Math.sqrt(Math.pow(x - 50, 2) + Math.pow(y - 50, 2));
+            } while (centerDist > 44);
+            
+            cell.style.left = x + '%';
+            cell.style.top = y + '%';
+            cell.innerHTML = '<div class="diatom-inner"></div>';
+            
+            petriDish.appendChild(cell);
+            gameState.cells.push(cell);
+            
+            gameState.score += Math.floor(gameState.salinity * 15);
+            updateScore();
+            
+            setTimeout(() => cell.classList.remove('new'), 600);
+        }
+
+        function calculateOD() {
+            const data = growthData[gameState.salinity];
+            const ratio = gameState.cells.length / data.maxCells;
+            return ratio * data.od;
+        }
+
+        // ============== GÜNCELLEME FONKSİYONLARI ==============
+        function updateTimer() {
+            timerDisplay.textContent = gameState.timeLeft;
+            timerDisplay.classList.remove('warning', 'danger');
+            if (gameState.timeLeft <= 10) timerDisplay.classList.add('danger');
+            else if (gameState.timeLeft <= 20) timerDisplay.classList.add('warning');
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = gameState.score.toLocaleString();
+        }
+
+        function updateStats() {
+            const data = growthData[gameState.salinity];
+            const cellCount = gameState.cells.length;
+            const ratio = cellCount / data.maxCells;
+            
+            const density = Math.floor(ratio * data.cellDensity);
+            const od = (ratio * data.od).toFixed(3);
+            
+            cellDensityDisplay.textContent = density.toLocaleString();
+            odValueDisplay.textContent = od;
+            cellCountDisplay.textContent = cellCount;
+            growthRateDisplay.textContent = gameState.lightOn ? data.rate.toFixed(2) + 'x' : '0x';
+        }
+
+        function updateGrowthRate() {
+            const data = growthData[gameState.salinity];
+            growthRateDisplay.textContent = gameState.lightOn ? data.rate.toFixed(2) + 'x' : '0x';
+        }
+
+        // ============== GRAFİK ==============
+        function initChart() {
+            chartContainer.innerHTML = '';
+            for (let i = 0; i < 25; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = '3px';
+                chartContainer.appendChild(bar);
+            }
+        }
+
+        function updateChart() {
+            const data = growthData[gameState.salinity];
+            const percentage = (gameState.cells.length / data.maxCells) * 100;
+            
+            gameState.chartData.push(percentage);
+            if (gameState.chartData.length > 25) gameState.chartData.shift();
+            
+            const bars = chartContainer.querySelectorAll('.chart-bar');
+            bars.forEach((bar, i) => {
+                const value = gameState.chartData[i] || 0;
+                bar.style.height = Math.max(3, value * 0.7) + 'px';
+            });
+        }
+    </script>
+</body>
+</html>
