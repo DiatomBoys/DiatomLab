@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔬 Diatom Laboratuvarı — Cyclotella Büyüme Simülasyonu</title>
+<meta name="description" content="Cyclotella meneghiniana diatomunu 60 saniyede en yüksek yoğunluğa ulaştır. Tuzluluk, ışık, sıcaklık ve silisi dengele — Liebig Minimum Yasası.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Exo:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap');
+
+:root{
+  --bg-0:#06101f; --bg-1:#0a1a30; --bg-2:#0e2238;
+  --glass:rgba(255,255,255,0.045);
+  --glass-2:rgba(255,255,255,0.07);
+  --brd:rgba(125,211,252,0.16);
+  --brd-strong:rgba(125,211,252,0.34);
+  --cyan:#38bdf8; --teal:#22d3ee;
+  --bio:#34d399; --bio-bright:#4ade80;
+  --amber:#fbbf24; --sun:#f59e0b;
+  --rose:#fb7185; --danger:#f43f5e;
+  --silica:#a5b4fc; --violet:#818cf8;
+  --text:#e9f2fa; --muted:#93a8bd; --dim:#5f7689;
+  --good:#34d399; --warn:#fbbf24; --bad:#fb7185;
+  --r:16px; --r-sm:11px;
+  --shadow:0 18px 50px -18px rgba(0,0,0,0.7);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Exo',system-ui,'Segoe UI',sans-serif;
+  background:
+    radial-gradient(1200px 700px at 80% -10%, rgba(34,211,238,0.10), transparent 60%),
+    radial-gradient(1000px 800px at 0% 110%, rgba(129,140,248,0.10), transparent 55%),
+    linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 55%, var(--bg-2) 100%);
+  background-attachment:fixed;
+  min-height:100vh; color:var(--text);
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+.mono{font-family:'Roboto Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 18px 60px}
+
+/* ---------- Header ---------- */
+header{text-align:center;padding:8px 0 18px;position:relative}
+.brand{display:inline-flex;align-items:center;gap:13px}
+.brand .logo{
+  width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+  background:linear-gradient(150deg,rgba(56,189,248,.25),rgba(52,211,153,.18));
+  border:1px solid var(--brd-strong);box-shadow:inset 0 0 18px rgba(56,189,248,.25)
+}
+.brand .logo svg{width:26px;height:26px}
+h1{
+  font-weight:800;font-size:clamp(1.7rem,4vw,2.5rem);letter-spacing:.5px;line-height:1;
+  background:linear-gradient(92deg,#7ee8ff,#38bdf8 40%,#4ade80);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.subtitle{color:var(--muted);margin-top:9px;font-size:.96rem}
+.subtitle i{color:var(--teal);font-style:italic}
+.thesis{
+  margin-top:13px;display:inline-flex;gap:8px;align-items:center;
+  background:var(--glass);border:1px solid var(--brd);border-radius:99px;
+  padding:7px 16px;font-size:.8rem;color:var(--muted);backdrop-filter:blur(8px)
+}
+.thesis svg{width:14px;height:14px;color:var(--teal)}
+
+/* ---------- Mode tabs ---------- */
+.modes{display:flex;justify-content:center;gap:8px;margin:18px 0 6px}
+.mode-tab{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  background:var(--glass);border:1px solid var(--brd);color:var(--muted);
+  padding:9px 18px;border-radius:99px;font-weight:600;font-size:.85rem;
+  transition:all .2s ease;font-family:inherit
+}
+.mode-tab svg{width:15px;height:15px}
+.mode-tab:hover{border-color:var(--brd-strong);color:var(--text)}
+.mode-tab.active{
+  background:linear-gradient(120deg,rgba(56,189,248,.22),rgba(52,211,153,.16));
+  border-color:var(--brd-strong);color:#fff;box-shadow:0 0 22px -6px rgba(56,189,248,.5)
+}
+.daily-note{text-align:center;font-size:.76rem;color:var(--dim);margin-top:7px;min-height:16px}
+.daily-note b{color:var(--silica)}
+
+/* ---------- Layout ---------- */
+.game{display:grid;grid-template-columns:minmax(0,1.45fr) 380px;gap:22px;margin-top:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{
+  background:var(--glass);border:1px solid var(--brd);border-radius:var(--r);
+  backdrop-filter:blur(11px);box-shadow:var(--shadow);position:relative;overflow:hidden
+}
+.panel-pad{padding:18px}
+.panel h3{
+  font-size:.82rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--teal);display:flex;align-items:center;gap:8px;margin-bottom:13px
+}
+.panel h3 svg{width:15px;height:15px}
+.panel h3 .right{margin-left:auto;text-transform:none;letter-spacing:0}
+
+/* ---------- Petri ---------- */
+.petri-wrap{padding:20px}
+.petri-stage{position:relative;width:100%;aspect-ratio:1/1;max-width:520px;margin:0 auto}
+#petri{width:100%;height:100%;display:block;border-radius:18px}
+.hud{position:absolute;inset:0;pointer-events:none;padding:14px}
+.hud-row{display:flex;justify-content:space-between;align-items:flex-start}
+.hud-chip{
+  background:rgba(6,16,31,.62);border:1px solid var(--brd);border-radius:12px;
+  padding:7px 12px;backdrop-filter:blur(6px)
+}
+.hud-chip .k{font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.hud-chip .v{font-size:1.5rem;font-weight:700;line-height:1.05}
+#hudTimer .v{color:var(--cyan)}
+#hudScore .v{color:var(--bio-bright)}
+#hudTimer.warn .v{color:var(--amber)}
+#hudTimer.danger .v{color:var(--rose);animation:blink .6s steps(2) infinite}
+@keyframes blink{50%{opacity:.4}}
+.hud-phase{
+  position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  background:rgba(6,16,31,.6);border:1px solid var(--brd);border-radius:99px;
+  padding:5px 15px;font-size:.74rem;color:var(--text);backdrop-filter:blur(6px);
+  display:flex;align-items:center;gap:8px
+}
+.hud-phase .dot{width:8px;height:8px;border-radius:50%;background:var(--bio);box-shadow:0 0 8px var(--bio)}
+.limiting-flag{
+  position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  background:rgba(244,63,94,.16);border:1px solid rgba(251,113,133,.45);
+  color:#ffd9df;border-radius:99px;padding:5px 14px;font-size:.74rem;font-weight:600;
+  backdrop-filter:blur(6px);opacity:0;transition:opacity .25s;display:flex;gap:7px;align-items:center
+}
+.limiting-flag.show{opacity:1}
+.limiting-flag svg{width:13px;height:13px}
+
+/* ---------- Growth curve ---------- */
+.curve-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.curve-legend{margin-left:auto;display:flex;gap:14px;font-size:.7rem;color:var(--muted)}
+.curve-legend span{display:inline-flex;align-items:center;gap:5px}
+.lg-line{width:14px;height:3px;border-radius:2px;background:var(--bio)}
+.lg-k{width:14px;height:0;border-top:2px dashed var(--muted)}
+.lg-ghost{width:14px;height:0;border-top:2px dashed var(--cyan);opacity:.6}
+.curve-stage{position:relative;width:100%;height:210px}
+#curve{width:100%;height:100%;display:block}
+.phase-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.ptag{
+  font-size:.68rem;padding:4px 10px;border-radius:8px;border:1px solid var(--brd);
+  color:var(--dim);background:rgba(255,255,255,.02);display:flex;gap:6px;align-items:center;transition:all .3s
+}
+.ptag .b{width:7px;height:7px;border-radius:2px;background:var(--dim)}
+.ptag.on{color:var(--text);border-color:var(--brd-strong)}
+.ptag.lag.on .b{background:var(--silica)} .ptag.lag.on{box-shadow:0 0 14px -5px var(--silica)}
+.ptag.log.on .b{background:var(--bio)} .ptag.log.on{box-shadow:0 0 14px -5px var(--bio)}
+.ptag.stat.on .b{background:var(--amber)} .ptag.stat.on{box-shadow:0 0 14px -5px var(--amber)}
+.ptag.death.on .b{background:var(--rose)} .ptag.death.on{box-shadow:0 0 14px -5px var(--rose)}
+
+/* ---------- Controls ---------- */
+.ctrl{margin-bottom:17px}
+.ctrl:last-child{margin-bottom:0}
+.ctrl-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px}
+.ctrl-name{font-size:.86rem;font-weight:600;display:flex;align-items:center;gap:7px}
+.ctrl-name svg{width:14px;height:14px;opacity:.85}
+.ctrl-val{font-family:'Roboto Mono',monospace;font-weight:700;font-size:1.05rem}
+.ctrl-val small{font-size:.7rem;color:var(--muted);font-weight:400}
+.q-meter{height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin:8px 0 4px;overflow:hidden}
+.q-fill{height:100%;width:0;border-radius:3px;transition:width .2s ease,background .2s ease}
+.ctrl-hint{font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between}
+.ctrl-hint .status{font-weight:600}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:7px;border-radius:5px;
+  background:rgba(255,255,255,.1);outline:none;cursor:pointer;margin:2px 0
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;cursor:pointer;
+  background:radial-gradient(circle at 35% 30%,#fff,#cfe9ff);
+  border:2px solid var(--cyan);box-shadow:0 0 14px rgba(56,189,248,.7)
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;cursor:pointer;background:#fff;border:2px solid var(--cyan)
+}
+input[type=range]:disabled{opacity:.5;cursor:not-allowed}
+.ctrl.sun input[type=range]::-webkit-slider-thumb{border-color:var(--amber);box-shadow:0 0 14px rgba(251,191,36,.7)}
+.ctrl.heat input[type=range]::-webkit-slider-thumb{border-color:var(--rose);box-shadow:0 0 14px rgba(251,113,133,.6)}
+
+/* silica */
+.si-bar{height:13px;border-radius:7px;background:rgba(255,255,255,.08);overflow:hidden;position:relative;margin:8px 0}
+.si-fill{height:100%;width:60%;border-radius:7px;
+  background:linear-gradient(90deg,var(--violet),var(--silica));transition:width .25s ease;position:relative}
+.si-fill.low{background:linear-gradient(90deg,#f43f5e,#fb7185)}
+.si-row{display:flex;gap:9px;align-items:center;margin-top:9px}
+.si-btn{
+  flex:1;cursor:pointer;border:1px solid var(--brd-strong);border-radius:10px;
+  background:linear-gradient(120deg,rgba(129,140,248,.2),rgba(165,180,252,.12));
+  color:#e7e9ff;font-weight:600;font-size:.8rem;padding:9px;font-family:inherit;
+  transition:all .18s;display:flex;align-items:center;justify-content:center;gap:7px
+}
+.si-btn svg{width:14px;height:14px}
+.si-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 18px -8px var(--violet)}
+.si-btn:disabled{opacity:.4;cursor:not-allowed}
+.si-doses{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.si-doses b{color:var(--silica)}
+
+/* ---------- Stats ---------- */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.stat{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.05);border-radius:11px;padding:11px 12px}
+.stat .l{font-size:.64rem;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:'Roboto Mono',monospace;font-weight:700;font-size:1.18rem;margin-top:3px;color:var(--bio-bright)}
+.stat .v.cy{color:var(--cyan)} .stat .v.am{color:var(--amber)} .stat .v.vi{color:var(--silica)}
+.stat .u{font-size:.62rem;color:var(--dim)}
+
+/* limiting factor callout */
+.liebig{
+  margin-top:13px;border-radius:12px;padding:11px 13px;font-size:.78rem;
+  background:rgba(56,189,248,.08);border:1px solid var(--brd);display:flex;gap:10px;align-items:center
+}
+.liebig svg{width:20px;height:20px;flex-shrink:0;color:var(--teal)}
+.liebig b{color:#fff}
+.liebig .name{color:var(--amber);font-weight:700}
+
+/* ---------- Buttons ---------- */
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{
+  border:none;border-radius:12px;padding:13px;font-weight:700;font-size:.92rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;transition:all .18s
+}
+.btn svg{width:16px;height:16px}
+.btn:hover:not(:disabled){transform:translateY(-2px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-start{grid-column:span 2;background:linear-gradient(120deg,var(--bio),#10b981);color:#04231a;
+  box-shadow:0 8px 24px -10px var(--bio)}
+.btn-pause{background:rgba(251,191,36,.16);border:1px solid rgba(251,191,36,.4);color:var(--amber)}
+.btn-reset{background:rgba(255,255,255,.06);border:1px solid var(--brd);color:var(--muted)}
+
+/* ---------- Leaderboard ---------- */
+.lb-tabs{display:flex;gap:6px;margin-bottom:11px}
+.lb-tab{flex:1;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--brd);
+  border-radius:9px;padding:7px;font-size:.74rem;font-weight:600;color:var(--muted);text-align:center;font-family:inherit;transition:.18s}
+.lb-tab.active{background:var(--glass-2);color:var(--text);border-color:var(--brd-strong)}
+.lb-list{display:flex;flex-direction:column;gap:5px;max-height:240px;overflow-y:auto}
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;
+  background:rgba(255,255,255,.03);font-size:.82rem}
+.lb-row .rank{font-family:'Roboto Mono',monospace;font-weight:700;color:var(--muted);width:24px;flex-shrink:0}
+.lb-row .tag{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row .sc{font-family:'Roboto Mono',monospace;font-weight:700;color:var(--bio-bright)}
+.lb-row.gold .rank{color:#ffd24a} .lb-row.gold{background:rgba(255,210,74,.08)}
+.lb-row.silver .rank{color:#cdd7e3} .lb-row.bronze .rank{color:#e0a36a}
+.lb-row.me{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3)}
+.lb-row.me .tag{color:#fff;font-weight:700}
+.lb-empty{font-size:.78rem;color:var(--dim);text-align:center;padding:18px 0}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(4,9,18,.84);backdrop-filter:blur(7px);
+  display:flex;align-items:center;justify-content:center;z-index:50;opacity:0;visibility:hidden;
+  transition:.3s;padding:18px}
+.overlay.active{opacity:1;visibility:visible}
+.modal{
+  width:min(540px,100%);background:linear-gradient(165deg,#0c1d33,#0a1626);
+  border:1px solid var(--brd-strong);border-radius:22px;padding:30px 28px;text-align:center;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.8);max-height:92vh;overflow-y:auto;
+  transform:scale(.94);transition:transform .3s}
+.overlay.active .modal{transform:scale(1)}
+.modal .cap{font-size:.8rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.modal h2{font-size:1.7rem;font-weight:800;margin:5px 0 2px;
+  background:linear-gradient(92deg,#7ee8ff,#4ade80);-webkit-background-clip:text;background-clip:text;color:transparent}
+.final-score{font-family:'Roboto Mono',monospace;font-weight:700;font-size:3.4rem;line-height:1;
+  color:var(--bio-bright);text-shadow:0 0 36px rgba(74,222,128,.45);margin:14px 0 4px}
+.final-unit{font-size:.8rem;color:var(--muted);margin-bottom:14px}
+.record{display:inline-flex;gap:7px;align-items:center;color:#ffd24a;font-weight:700;font-size:1rem;margin-bottom:6px}
+.record svg{width:17px;height:17px}
+.pct-wrap{margin:16px 0}
+.pct-bar{height:11px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:8px}
+.pct-fill{height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--bio));
+  transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.pct-txt{font-size:.86rem;color:var(--text)}
+.pct-txt b{color:var(--bio-bright)}
+.fstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.fstat{background:rgba(0,0,0,.28);border:1px solid var(--brd);border-radius:12px;padding:13px 8px}
+.fstat .l{font-size:.62rem;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.fstat .v{font-family:'Roboto Mono',monospace;font-weight:700;font-size:1.12rem;margin-top:4px;color:var(--text)}
+.modal-tip{font-size:.78rem;color:var(--muted);background:rgba(56,189,248,.07);border:1px solid var(--brd);
+  border-radius:12px;padding:11px 13px;margin:6px 0 18px;text-align:left;line-height:1.5}
+.modal-tip b{color:var(--teal)}
+.modal-btns{display:flex;gap:10px}
+.modal-btns .btn{flex:1}
+
+/* ---------- Info accordion ---------- */
+.info{margin-top:26px}
+.acc{border:1px solid var(--brd);border-radius:13px;background:var(--glass);margin-bottom:10px;overflow:hidden}
+.acc summary{cursor:pointer;padding:15px 18px;font-weight:600;font-size:.95rem;display:flex;align-items:center;gap:10px;list-style:none}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary svg{width:17px;height:17px;color:var(--teal)}
+.acc summary .chev{margin-left:auto;transition:transform .25s;width:15px;height:15px;color:var(--muted)}
+.acc[open] summary .chev{transform:rotate(180deg)}
+.acc .body{padding:2px 18px 18px;font-size:.88rem;color:var(--muted);line-height:1.65}
+.acc .body p{margin-bottom:9px}
+.acc .body strong{color:var(--text)}
+.acc .body .src{font-size:.74rem;color:var(--dim)}
+.acc ul{margin:4px 0 4px 18px}
+.acc li{margin-bottom:5px}
+.acc .step{display:flex;gap:11px;margin-bottom:9px}
+.acc .step .n{flex-shrink:0;width:23px;height:23px;border-radius:7px;display:grid;place-items:center;
+  background:rgba(56,189,248,.15);border:1px solid var(--brd);color:var(--cyan);font-weight:700;font-size:.8rem}
+.foot{text-align:center;color:var(--dim);font-size:.76rem;margin-top:26px;line-height:1.7}
+
+.badge-real{display:inline-flex;gap:6px;align-items:center;background:rgba(52,211,153,.12);
+  border:1px solid rgba(52,211,153,.3);color:var(--bio-bright);padding:5px 12px;border-radius:99px;font-size:.72rem;margin-top:12px}
+.badge-real svg{width:13px;height:13px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:rgba(12,29,51,.96);border:1px solid var(--brd-strong);border-radius:12px;
+  padding:11px 18px;font-size:.84rem;font-weight:600;opacity:0;pointer-events:none;
+  transition:all .3s;z-index:60;display:flex;gap:9px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:15px;height:15px;color:var(--silica)}
+
+/* ---------- Responsive ---------- */
+@media(max-width:1024px){
+  .game{grid-template-columns:1fr}
+  .col.right{order:2}
+  .petri-stage{max-width:460px}
+}
+@media(max-width:520px){
+  .wrap{padding:14px 12px 44px}
+  .hud-chip .v{font-size:1.2rem}
+  .fstats{grid-template-columns:1fr 1fr}
+  .modes{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.05ms!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="url(#g1)" stroke-width="1.8"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#4ade80"/></linearGradient></defs><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M18 6l-2.1 2.1M6 18l2.1-2.1M18 18l-2.1-2.1"/></svg>
+      </div>
+      <h1>Diatom Laboratuvarı</h1>
+    </div>
+    <p class="subtitle"><i>Cyclotella meneghiniana</i> — Tuzluluk &amp; Büyüme Optimizasyon Simülasyonu</p>
+    <div class="thesis">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Bitirme Tezi · Düşük Tuzlulukta Diatom Hücre Büyümesi · 2026
+    </div>
+
+    <div class="modes" role="tablist">
+      <button class="mode-tab active" id="modeFree" role="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        Serbest Mod
+      </button>
+      <button class="mode-tab" id="modeDaily" role="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/><path d="M12 3v12" /><circle cx="12" cy="19.5" r="1.6"/></svg>
+        Günün Meydan Okuması
+      </button>
+    </div>
+    <div class="daily-note" id="dailyNote"></div>
+  </header>
+
+  <div class="game">
+    <!-- LEFT -->
+    <div class="col left">
+      <div class="panel petri-wrap">
+        <div class="petri-stage">
+          <canvas id="petri"></canvas>
+          <div class="hud">
+            <div class="hud-row">
+              <div class="hud-chip" id="hudScore"><div class="k">Skor</div><div class="v mono">0</div></div>
+              <div class="hud-chip" id="hudTimer"><div class="k">Süre</div><div class="v mono">60</div></div>
+            </div>
+            <div class="limiting-flag" id="limitFlag">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              <span id="limitFlagTxt">Sınırlayıcı: Işık</span>
+            </div>
+            <div class="hud-phase"><span class="dot"></span><span id="hudPhase">Hazır — Başlat'a bas</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GROWTH CURVE (promoted hero) -->
+      <div class="panel panel-pad">
+        <div class="curve-head">
+          <h3 style="margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M3 15c3 0 4-9 8-9s4 7 10 3"/></svg>
+            Büyüme Eğrisi <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400;font-size:.74rem">(yoğunluk / zaman)</span>
+          </h3>
+          <div class="curve-legend">
+            <span><i class="lg-line"></i>Canlı</span>
+            <span><i class="lg-ghost"></i>Rekor</span>
+            <span><i class="lg-k"></i>Kapasite K</span>
+          </div>
+        </div>
+        <div class="curve-stage"><canvas id="curve"></canvas></div>
+        <div class="phase-tags">
+          <div class="ptag lag" id="ptLag"><span class="b"></span>Lag (uyum)</div>
+          <div class="ptag log" id="ptLog"><span class="b"></span>Log (üstel bölünme)</div>
+          <div class="ptag stat" id="ptStat"><span class="b"></span>Durağan (plato)</div>
+          <div class="ptag death" id="ptDeath"><span class="b"></span>Çöküş</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col right">
+      <!-- Controls -->
+      <div class="panel panel-pad">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+          Kültür Koşulları
+        </h3>
+
+        <!-- Salinity -->
+        <div class="ctrl">
+          <div class="ctrl-top">
+            <span class="ctrl-name"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M5 3h14l-1 7H6L5 3zM6 10c-1 4-1 8 6 11 7-3 7-7 6-11"/></svg>Tuzluluk</span>
+            <span class="ctrl-val"><span id="vSal">10</span> <small>g/L</small></span>
+          </div>
+          <input type="range" id="sSal" min="1" max="35" value="10" step="1">
+          <div class="q-meter"><div class="q-fill" id="qSal"></div></div>
+          <div class="ctrl-hint"><span id="hSal">Acı su (brak)</span><span class="status" id="stSal">—</span></div>
+        </div>
+
+        <!-- Light -->
+        <div class="ctrl sun">
+          <div class="ctrl-top">
+            <span class="ctrl-name"><svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Işık Şiddeti</span>
+            <span class="ctrl-val"><span id="vLight">120</span> <small>µmol</small></span>
+          </div>
+          <input type="range" id="sLight" min="0" max="600" value="120" step="10">
+          <div class="q-meter"><div class="q-fill" id="qLight"></div></div>
+          <div class="ctrl-hint"><span id="hLight">Doyma bölgesi</span><span class="status" id="stLight">—</span></div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="ctrl heat">
+          <div class="ctrl-top">
+            <span class="ctrl-name"><svg viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg>Sıcaklık</span>
+            <span class="ctrl-val"><span id="vTemp">20</span> <small>°C</small></span>
+          </div>
+          <input type="range" id="sTemp" min="5" max="35" value="20" step="1">
+          <div class="q-meter"><div class="q-fill" id="qTemp"></div></div>
+          <div class="ctrl-hint"><span id="hTemp">İdeal aralık</span><span class="status" id="stTemp">—</span></div>
+        </div>
+
+        <!-- Silica -->
+        <div class="ctrl">
+          <div class="ctrl-top">
+            <span class="ctrl-name"><svg viewBox="0 0 24 24" fill="none" stroke="var(--silica)" stroke-width="2"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M12 22V12M3 7l9 5 9-5"/></svg>Silis (Si) Havuzu</span>
+            <span class="ctrl-val"><span id="vSi">100</span><small>%</small></span>
+          </div>
+          <div class="si-bar"><div class="si-fill" id="siFill"></div></div>
+          <div class="si-row">
+            <button class="si-btn" id="siBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              Silis Ekle
+            </button>
+            <span class="si-doses">Doz: <b id="siDoses">3</b>/3</span>
+          </div>
+          <div class="ctrl-hint" style="margin-top:6px"><span>Frustül (cam kabuk) için şart</span><span class="status" id="stSi">Bol</span></div>
+        </div>
+      </div>
+
+      <!-- Live stats -->
+      <div class="panel panel-pad">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>
+          Gerçek Zamanlı Veriler
+        </h3>
+        <div class="stat-grid">
+          <div class="stat"><div class="l">Hücre Yoğunluğu</div><div class="v" id="dDensity">0</div><div class="u">hücre/mL</div></div>
+          <div class="stat"><div class="l">OD₇₅₀</div><div class="v cy" id="dOD">0.000</div><div class="u">optik yoğunluk</div></div>
+          <div class="stat"><div class="l">Büyüme Hızı μ</div><div class="v am" id="dMu">0.00</div><div class="u">bölünme/gün</div></div>
+          <div class="stat"><div class="l">Hücre Sayısı</div><div class="v" id="dCells">0</div><div class="u">petride görünen</div></div>
+        </div>
+        <div class="liebig">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/><circle cx="12" cy="12" r="3"/></svg>
+          <div><b>Sınırlayıcı faktör:</b> <span class="name" id="liebigName">—</span><br><span style="font-size:.72rem;color:var(--muted)">En kıt kaynak büyümeyi belirler (Liebig Minimum Yasası)</span></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="panel panel-pad">
+        <div class="btns">
+          <button class="btn btn-start" id="btnStart">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Başlat
+          </button>
+          <button class="btn btn-pause" id="btnPause" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h4v16H7zM13 4h4v16h-4z"/></svg>Duraklat
+          </button>
+          <button class="btn btn-reset" id="btnReset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg>Sıfırla
+          </button>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="panel panel-pad">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 4H4v2a3 3 0 0 0 3 3M17 4h3v2a3 3 0 0 1-3 3"/></svg>
+          Lider Tablosu
+          <span class="right" style="font-size:.7rem;color:var(--dim)">isimsiz</span>
+        </h3>
+        <div class="lb-tabs">
+          <button class="lb-tab active" id="lbFree">Serbest</button>
+          <button class="lb-tab" id="lbDaily">Günlük</button>
+        </div>
+        <div class="lb-list" id="lbList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="info">
+    <details class="acc" open>
+      <summary>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16l13-8z"/></svg>
+        Nasıl Oynanır?
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="body">
+        <div class="step"><div class="n">1</div><div><strong>4 koşulu dengele.</strong> Tuzluluk, ışık, sıcaklık ve silis. Her birinin bir <strong>optimumu</strong> var — sonuna çekmek genelde zarar verir (örn. çok ışık = fotoinhibisyon).</div></div>
+        <div class="step"><div class="n">2</div><div><strong>En kıt kaynağı izle.</strong> Büyüme, en zayıf faktör tarafından sınırlanır (Liebig). Petrinin üstündeki <span style="color:var(--rose)">kırmızı uyarı</span> hangi faktörün seni frenlediğini söyler.</div></div>
+        <div class="step"><div class="n">3</div><div><strong>Silisi yönet.</strong> Hücreler bölündükçe silis tükenir; biterse bölünme <strong>durur</strong> (gerçekte diatom patlamalarını bu bitirir). 3 doz silis ekleme hakkın var — doğru anda kullan.</div></div>
+        <div class="step"><div class="n">4</div><div><strong>60 saniyede en yüksek yoğunluğa ulaş.</strong> Skorun hem hücre sayına hem de koşulları ne kadar ideal tuttuğuna bağlı. <strong>Günün Meydan Okuması</strong>'nda herkes aynı koşullarla yarışır.</div></div>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+        Diatom nedir? Gerçek biyoloji
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="body">
+        <p><strong>Diatomlar</strong>, <strong>camdan (silis) iki parçalı bir kabuğa</strong> (frustül) sahip tek hücreli alglerdir — bir petri kabı gibi geçen büyük kapak (epiteka) ve küçük taban (hipoteka). Dünya'daki oksijenin <strong>%20–50'sini</strong> üretirler.</p>
+        <p><strong>Bölünerek çoğalırlar (binary fission)</strong> ve her bölünmede bir yavru biraz <strong>küçülür</strong> (MacDonald–Pfitzer kuralı). Çok küçülünce, eşeyli üreme (<i>auxospore</i>) ile boyutlarını sıfırlarlar.</p>
+        <p><strong>Silise mecburlardır.</strong> Cam kabuğu yapmak için çözünmüş silisik asit gerekir — başka hiçbir alg grubunda olmayan bir zorunluluk. Silis bitince bölünme durur.</p>
+        <p><strong>Cyclotella meneghiniana</strong> tatlı–acı su (öribalin) bir türdür. Büyümesi tuzlulukla <strong>çan eğrisi</strong> çizer: optimum ~<strong>15–18 g/L</strong>, hem tatlı suya (0) hem deniz suyuna (~35) doğru azalır.</p>
+        <p class="src">Kaynaklar: Roubeix &amp; Lancelot (2008), Transitional Waters Bulletin · Diatom (Wikipedia) · diatoms.org · UTEX f/2 medium · Roubeix P–I &amp; sıcaklık çalışmaları.</p>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4"/></svg>
+        Simülasyon modeli (jüri için)
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="body">
+        <p>Popülasyon, <strong>lojistik denklemle</strong> büyür: <span class="mono" style="color:var(--text)">dN/dt = μ·N·(1 − N/K)</span> — yani lag → üstel (log) → durağan fazları. Bu, gerçek batch kültür büyüme eğrisinin S şeklidir.</p>
+        <p>Anlık büyüme hızı <span class="mono" style="color:var(--text)">μ = μₘₐₓ · min(f<sub>tuz</sub>, f<sub>ışık</sub>, f<sub>sıcaklık</sub>, f<sub>silis</sub>)</span>. <strong>MIN</strong> burada Liebig Minimum Yasası'dır: en kıt kaynak hızı belirler, hepsini toplamak değil.</p>
+        <ul>
+          <li><strong>Tuzluluk:</strong> ~16 g/L tepeli asimetrik çan (Roubeix &amp; Lancelot verisi).</li>
+          <li><strong>Işık:</strong> Platt P–I eğrisi — doyma ~150 µmol, üstünde <strong>fotoinhibisyon</strong> (düşüş).</li>
+          <li><strong>Sıcaklık:</strong> tepe ~25°C; sıcak tarafta dik çöküş.</li>
+          <li><strong>Silis:</strong> Monod doygunluğu; tükenince μ→0. Ayrıca yoğunluk arttıkça <strong>öz-gölgeleme</strong> (Beer–Lambert) ışığı kısar.</li>
+        </ul>
+        <p class="src">Eğitsel basitleştirme: birimler (µmol, g/L, °C, gün⁻¹) gerçekçi aralıklara dayanır; mutlak sayılar oyun ölçeğine göre normalize edilmiştir.</p>
+      </div>
+    </details>
+
+    <div style="text-align:center">
+      <span class="badge-real">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+        Gerçek laboratuvar verisi + literatür ile kalibre edildi
+      </span>
+    </div>
+    <div class="foot">Diatom Laboratuvarı · Bitirme Tezi Demosu 2026 · Tek dosya, sunucusuz (GitHub Pages uyumlu)</div>
+  </div>
+</div>
+
+<!-- Game over modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="cap" id="mCap">Süre Doldu</div>
+    <h2 id="mTitle">Kültür Hasadı</h2>
+    <div class="record" id="mRecord" style="display:none">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.8 5.9 20.4l1.5-6.8L2.2 9l6.9-.7z"/></svg>
+      Yeni Rekor!
+    </div>
+    <div class="final-score mono" id="mScore">0</div>
+    <div class="final-unit">toplam skor</div>
+
+    <div class="pct-wrap">
+      <div class="pct-txt" id="mPctTxt">Koşuların <b>%0</b>'ini geçtin</div>
+      <div class="pct-bar"><div class="pct-fill" id="mPctFill"></div></div>
+    </div>
+
+    <div class="fstats">
+      <div class="fstat"><div class="l">Tepe Yoğunluk</div><div class="v" id="mDensity">0</div></div>
+      <div class="fstat"><div class="l">Maks OD₇₅₀</div><div class="v" id="mOD">0.000</div></div>
+      <div class="fstat"><div class="l">Üretilen O₂</div><div class="v" id="mO2">0</div></div>
+    </div>
+
+    <div class="modal-tip" id="mTip"></div>
+
+    <div class="modal-btns">
+      <button class="btn btn-reset" id="mClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Kapat
+      </button>
+      <button class="btn btn-start" id="mReplay" style="grid-column:auto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg>Tekrar Oyna
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/></svg><span id="toastTxt"></span></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   DIATOM LABORATUVARI v2  —  Cyclotella meneghiniana growth sim
+   Single-file, no backend, vanilla JS + Canvas.
+   Model: logistic growth + Liebig's Law of the Minimum.
+===================================================================== */
+
+/* ---------- tiny utils ---------- */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp = (a,b,t)=>a+(b-a)*t;
+const fmt = n => Math.round(n).toLocaleString('tr-TR');
+
+// deterministic RNG (Mulberry32) for daily challenge
+function mulberry32(seed){
+  let a = seed>>>0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a>>>15), 1 | a);
+    t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(str){ let h=2166136261>>>0; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);} return h>>>0; }
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* ---------- biological response factors (all return 0..1) ---------- */
+// Salinity: asymmetric bell, optimum ~16 g/L (Roubeix & Lancelot 2008 shape)
+function fSal(s){
+  const opt=16, wLo=14, wHi=18, w = s<opt?wLo:wHi;
+  return Math.exp(-0.5*Math.pow((s-opt)/w,2));
+}
+// Light (Platt P–I with photoinhibition), normalized to peak=1
+const LIGHT_IK=150, LIGHT_BETA=0.0013;
+let LIGHT_NORM=1;
+function lightRaw(I){ return (1-Math.exp(-I/LIGHT_IK))*Math.exp(-LIGHT_BETA*I); }
+(function(){ let m=0; for(let I=0;I<=600;I++) m=Math.max(m,lightRaw(I)); LIGHT_NORM=m; })();
+function fLight(I){ return clamp(lightRaw(I)/LIGHT_NORM,0,1); }
+// Temperature: asymmetric bell, optimum 25°C, steep above
+function fTemp(t){
+  const opt=25, wLo=11, wHi=4.5, w = t<opt?wLo:wHi;
+  return Math.exp(-0.5*Math.pow((t-opt)/w,2));
+}
+// Silica: Monod saturation (Si in 0..100)
+function fSi(si){ const Kh=14; return si<=0?0: si/(si+Kh); }
+
+/* ---------- game state ---------- */
+const K_CAP = 320;           // visual carrying capacity (cells in dish)
+const DENSITY_AT_K = 2304668;// cells/mL represented by full dish
+const MU_MAX = 0.215;        // per-second logistic rate at perfect env
+const RUN_TIME = 60;
+const SI_DRAIN = 0.45;       // Si consumed per new cell (% units scaled)
+const SI_REGEN = 0.16;       // slow passive Si regen per second
+
+let S = null;
+function freshState(){
+  return {
+    mode:'free',
+    running:false, paused:false, over:false,
+    t:0,                  // elapsed seconds
+    N:6,                  // population (float)
+    cells:[],             // rendered cell objects
+    si:100, siDoses:3,
+    score:0, peakN:0, maxOD:0, sumEnv:0, envSamples:0, o2:0,
+    phase:'idle',
+    curve:[],             // {t, dens}
+    seedRng:Math.random, // RNG for events
+    event:null,
+    salBase:10, lightBase:120, tempBase:20, // daily start
+    lastDivAccum:0
+  };
+}
+
+/* ---------- DOM refs ---------- */
+const petri=$('petri'), pctx=petri.getContext('2d');
+const curve=$('curve'), cctx=curve.getContext('2d');
+const el = {
+  sSal:$('sSal'), vSal:$('vSal'), qSal:$('qSal'), hSal:$('hSal'), stSal:$('stSal'),
+  sLight:$('sLight'), vLight:$('vLight'), qLight:$('qLight'), hLight:$('hLight'), stLight:$('stLight'),
+  sTemp:$('sTemp'), vTemp:$('vTemp'), qTemp:$('qTemp'), hTemp:$('hTemp'), stTemp:$('stTemp'),
+  vSi:$('vSi'), siFill:$('siFill'), siBtn:$('siBtn'), siDoses:$('siDoses'), stSi:$('stSi'),
+  dDensity:$('dDensity'), dOD:$('dOD'), dMu:$('dMu'), dCells:$('dCells'),
+  liebigName:$('liebigName'),
+  hudScore:$('hudScore').querySelector('.v'), hudTimer:$('hudTimer'), hudTimerV:$('hudTimer').querySelector('.v'),
+  hudPhase:$('hudPhase'), limitFlag:$('limitFlag'), limitFlagTxt:$('limitFlagTxt'),
+  btnStart:$('btnStart'), btnPause:$('btnPause'), btnReset:$('btnReset'),
+  ptLag:$('ptLag'), ptLog:$('ptLog'), ptStat:$('ptStat'), ptDeath:$('ptDeath'),
+  overlay:$('overlay'),
+  dailyNote:$('dailyNote'), toast:$('toast'), toastTxt:$('toastTxt')
+};
+
+/* ---------- canvas sizing (HiDPI) ---------- */
+let DPR = Math.min(window.devicePixelRatio||1, 2);
+function sizeCanvas(c){
+  const r = c.getBoundingClientRect();
+  c.width = Math.max(1,Math.round(r.width*DPR));
+  c.height= Math.max(1,Math.round(r.height*DPR));
+}
+function sizeAll(){ DPR=Math.min(window.devicePixelRatio||1,2); sizeCanvas(petri); sizeCanvas(curve); drawCurve(); drawPetri(); }
+window.addEventListener('resize', sizeAll);
+
+/* =====================================================================
+   FACTOR READOUT  (updates control quality bars + limiting factor)
+===================================================================== */
+function colForQ(q){ return q>0.75?'var(--good)': q>0.45?'var(--warn)':'var(--bad)'; }
+function envFactors(){
+  return {
+    Tuzluluk: fSal(+el.sSal.value),
+    'Işık': fLight(+el.sLight.value),
+    'Sıcaklık': fTemp(+el.sTemp.value),
+    Silis: fSi(S?S.si:100)
+  };
+}
+function lightRegime(I){
+  if(I<70) return ['Işık-kısıtlı','#fbbf24'];
+  if(I<=230) return ['Doyma (ideal)','#34d399'];
+  if(I<=380) return ['Aşırı ışık','#fbbf24'];
+  return ['Fotoinhibisyon!','#fb7185'];
+}
+function salLabel(s){ if(s<6)return'Tatlı–düşük'; if(s<12)return'Düşük brak'; if(s<=20)return'Optimum brak'; if(s<=28)return'Yüksek tuz'; return'Deniz suyu'; }
+function tempLabel(t){ if(t<14)return'Soğuk'; if(t<=27)return'İdeal aralık'; if(t<=30)return'Sıcak stres'; return'Aşırı sıcak'; }
+
+function refreshControls(){
+  const sal=+el.sSal.value, li=+el.sLight.value, te=+el.sTemp.value;
+  el.vSal.textContent=sal; el.vLight.textContent=li; el.vTemp.textContent=te;
+  const qs=fSal(sal), ql=fLight(li), qt=fTemp(te), qsi=fSi(S?S.si:100);
+
+  el.qSal.style.width=(qs*100)+'%'; el.qSal.style.background=colForQ(qs);
+  el.qLight.style.width=(ql*100)+'%'; el.qLight.style.background=colForQ(ql);
+  el.qTemp.style.width=(qt*100)+'%'; el.qTemp.style.background=colForQ(qt);
+
+  el.hSal.textContent=salLabel(sal);
+  el.stSal.textContent=Math.round(qs*100)+'%'; el.stSal.style.color=colForQ(qs);
+  const lr=lightRegime(li); el.hLight.textContent=lr[0];
+  el.stLight.textContent=Math.round(ql*100)+'%'; el.stLight.style.color=colForQ(ql);
+  el.hTemp.textContent=tempLabel(te);
+  el.stTemp.textContent=Math.round(qt*100)+'%'; el.stTemp.style.color=colForQ(qt);
+
+  // silica
+  const si=S?S.si:100;
+  el.vSi.textContent=Math.round(si);
+  el.siFill.style.width=clamp(si,0,100)+'%';
+  el.siFill.classList.toggle('low', si<25);
+  el.stSi.textContent = si<8?'Tükendi!': si<25?'Azalıyor':'Bol';
+  el.stSi.style.color = si<8?'var(--bad)': si<25?'var(--warn)':'var(--good)';
+  el.siDoses.textContent=S?S.siDoses:3;
+  el.siBtn.disabled = !S || S.siDoses<=0 || si>92 || S.over;
+
+  // limiting factor (Liebig)
+  const f=envFactors();
+  let minK=null,minV=2;
+  for(const k in f){ if(f[k]<minV){minV=f[k];minK=k;} }
+  el.liebigName.textContent = minK + ' (%'+Math.round(minV*100)+')';
+  // petri flag only while running & clearly limiting
+  if(S&&S.running&&!S.paused&&minV<0.6){
+    el.limitFlag.classList.add('show');
+    el.limitFlagTxt.textContent='Sınırlayıcı: '+minK;
+  } else el.limitFlag.classList.remove('show');
+}
+
+/* =====================================================================
+   CELL SYSTEM (petri rendering)
+===================================================================== */
+function spawnCell(parent){
+  const ang=Math.random()*Math.PI*2;
+  let x,y;
+  if(parent){
+    const d=parent.r*0.9+0.02;           // small normalized offset (binary fission: daughter next to parent)
+    x=parent.x+Math.cos(ang)*d;
+    y=parent.y+Math.sin(ang)*d;
+    const dx=x-0.5,dy=y-0.5,dist=Math.hypot(dx,dy);
+    if(dist>0.42){ x=0.5+dx/dist*0.42; y=0.5+dy/dist*0.42; }
+  } else {
+    const rr=Math.sqrt(Math.random())*0.40, a=Math.random()*Math.PI*2;
+    x=0.5+Math.cos(a)*rr; y=0.5+Math.sin(a)*rr;
+  }
+  const gen = parent? Math.min(parent.gen+1,6):0;
+  const baseR = 0.030 - gen*0.0026 + Math.random()*0.004; // shrink with generation (Pfitzer)
+  S.cells.push({x,y,r:baseR,gen,
+    vx:(Math.random()-0.5)*0.0009, vy:(Math.random()-0.5)*0.0009,
+    rot:Math.random()*6.28, spin:(Math.random()-0.5)*0.01,
+    born:S.t, pop:0});
+}
+function syncCells(){
+  const want = Math.min(Math.round(S.N), K_CAP);
+  while(S.cells.length < want){
+    const parent = S.cells.length? S.cells[(Math.random()*S.cells.length)|0] : null;
+    spawnCell(parent);
+    const c=S.cells[S.cells.length-1]; c.pop=1; // pop-in animation
+  }
+  while(S.cells.length > want) S.cells.pop();
+}
+
+function drawPetri(){
+  const w=petri.width, h=petri.height;
+  pctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, R=Math.min(w,h)/2-6*DPR, RY=R;
+
+  // light glow intensity from slider
+  const li = +el.sLight.value;
+  const lightF = fLight(li);
+  const lit = (S&&S.running)? li/600 : li/900;
+
+  // dish water
+  pctx.save();
+  pctx.beginPath(); pctx.ellipse(cx,cy,R,RY,0,0,7); pctx.clip();
+  let g=pctx.createRadialGradient(cx,cy*0.8,R*0.1,cx,cy,R*1.15);
+  g.addColorStop(0, `rgba(${30+lit*40},${70+lit*60},${110+lit*70},1)`);
+  g.addColorStop(1, '#081726');
+  pctx.fillStyle=g; pctx.fillRect(0,0,w,h);
+
+  // sun shimmer when lit
+  if(lit>0.12){
+    let sg=pctx.createRadialGradient(cx,cy-RY*0.4,2,cx,cy-RY*0.4,R*1.1);
+    sg.addColorStop(0,`rgba(255,240,180,${0.05+lit*0.16})`);
+    sg.addColorStop(1,'rgba(255,240,180,0)');
+    pctx.fillStyle=sg; pctx.fillRect(0,0,w,h);
+  }
+
+  // cells
+  for(const c of S? S.cells:[]){
+    const px=cx+(c.x-0.5)*2*R, py=cy+(c.y-0.5)*2*RY;
+    let rad=c.r*R*2;
+    if(c.pop>0){ rad*= (1.4-0.4*(1-c.pop)); }
+    drawDiatom(px,py,rad,c.rot, lightF);
+  }
+  pctx.restore();
+
+  // rim
+  pctx.beginPath(); pctx.ellipse(cx,cy,R,RY,0,0,7);
+  pctx.lineWidth=5*DPR; pctx.strokeStyle='rgba(125,211,252,0.30)'; pctx.stroke();
+  pctx.lineWidth=1.5*DPR; pctx.strokeStyle='rgba(125,211,252,0.12)';
+  pctx.beginPath(); pctx.ellipse(cx,cy,R-4*DPR,RY-4*DPR,0,0,7); pctx.stroke();
+}
+function drawDiatom(x,y,r,rot,health){
+  if(r<0.6) r=0.6;
+  pctx.save(); pctx.translate(x,y); pctx.rotate(rot);
+  // health tints from olive (stressed) to vivid bio-green (healthy)
+  const gg = Math.round(lerp(150,255,health));
+  const core=`rgba(${Math.round(lerp(120,40,health))},${gg},${Math.round(lerp(90,140,health))},`;
+  let g=pctx.createRadialGradient(0,0,r*0.1,0,0,r);
+  g.addColorStop(0, core+'0.98)');
+  g.addColorStop(0.6, `rgba(${Math.round(lerp(70,16,health))},${Math.round(lerp(120,180,health))},${Math.round(lerp(70,100,health))},0.95)`);
+  g.addColorStop(1, 'rgba(8,60,40,0.92)');
+  pctx.fillStyle=g;
+  pctx.shadowColor=`rgba(74,222,128,${0.35*health})`; pctx.shadowBlur=r*0.9;
+  pctx.beginPath(); pctx.arc(0,0,r,0,7); pctx.fill();
+  pctx.shadowBlur=0;
+  // Cyclotella radial pattern
+  pctx.strokeStyle=`rgba(255,255,255,${0.18+0.12*health})`; pctx.lineWidth=Math.max(0.4,r*0.04);
+  const spokes=10;
+  for(let i=0;i<spokes;i++){ const a=i/spokes*6.283; pctx.beginPath(); pctx.moveTo(Math.cos(a)*r*0.32,Math.sin(a)*r*0.32); pctx.lineTo(Math.cos(a)*r*0.86,Math.sin(a)*r*0.86); pctx.stroke(); }
+  pctx.beginPath(); pctx.arc(0,0,r*0.30,0,7); pctx.stroke();
+  pctx.fillStyle='rgba(6,40,28,0.8)'; pctx.beginPath(); pctx.arc(0,0,r*0.15,0,7); pctx.fill();
+  pctx.restore();
+}
+
+/* =====================================================================
+   GROWTH CURVE (hero canvas)
+===================================================================== */
+let bestCurve = null;
+function loadBestCurve(){
+  try{ bestCurve = JSON.parse(localStorage.getItem('diatom_bestcurve_'+ (S?S.mode:'free'))||'null'); }catch(e){ bestCurve=null; }
+}
+function drawCurve(){
+  const w=curve.width, h=curve.height; cctx.clearRect(0,0,w,h);
+  const padL=44*DPR, padR=12*DPR, padT=12*DPR, padB=26*DPR;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const x0=padL, y0=h-padB;
+  const maxDens=DENSITY_AT_K;
+  const X = t => x0 + (t/RUN_TIME)*plotW;
+  const Y = d => y0 - (d/maxDens)*plotH;
+
+  // grid
+  cctx.strokeStyle='rgba(255,255,255,0.06)'; cctx.lineWidth=1*DPR;
+  cctx.fillStyle='rgba(255,255,255,0.32)'; cctx.font=`${10*DPR}px 'Roboto Mono',monospace`;
+  cctx.textAlign='right'; cctx.textBaseline='middle';
+  for(let i=0;i<=4;i++){ const yy=y0-(i/4)*plotH; cctx.beginPath(); cctx.moveTo(x0,yy); cctx.lineTo(w-padR,yy); cctx.stroke();
+    cctx.fillText(((maxDens*i/4/1e6).toFixed(1))+'M', x0-7*DPR, yy); }
+  cctx.textAlign='center'; cctx.textBaseline='top';
+  for(let s=0;s<=60;s+=15){ const xx=X(s); cctx.fillText(s+'s', xx, y0+6*DPR); }
+
+  // carrying capacity K
+  cctx.setLineDash([6*DPR,5*DPR]); cctx.strokeStyle='rgba(147,168,189,0.5)'; cctx.lineWidth=1.4*DPR;
+  cctx.beginPath(); cctx.moveTo(x0,Y(maxDens*0.97)); cctx.lineTo(w-padR,Y(maxDens*0.97)); cctx.stroke();
+  cctx.setLineDash([]);
+
+  // ghost best run
+  if(bestCurve && bestCurve.length>1){
+    cctx.setLineDash([5*DPR,4*DPR]); cctx.strokeStyle='rgba(56,189,248,0.55)'; cctx.lineWidth=1.6*DPR;
+    cctx.beginPath(); bestCurve.forEach((p,i)=>{ const xx=X(p.t),yy=Y(p.dens); i?cctx.lineTo(xx,yy):cctx.moveTo(xx,yy); }); cctx.stroke();
+    cctx.setLineDash([]);
+  }
+
+  // live curve
+  const data = S?S.curve:[];
+  if(data.length>0){
+    // area fill
+    let g=cctx.createLinearGradient(0,padT,0,y0);
+    g.addColorStop(0,'rgba(52,211,153,0.34)'); g.addColorStop(1,'rgba(52,211,153,0.01)');
+    cctx.beginPath(); cctx.moveTo(X(data[0].t),y0);
+    data.forEach(p=>cctx.lineTo(X(p.t),Y(p.dens)));
+    cctx.lineTo(X(data[data.length-1].t),y0); cctx.closePath(); cctx.fillStyle=g; cctx.fill();
+    // glow line
+    cctx.shadowColor='rgba(74,222,128,0.8)'; cctx.shadowBlur=10*DPR;
+    cctx.strokeStyle='#4ade80'; cctx.lineWidth=2.6*DPR; cctx.lineJoin='round';
+    cctx.beginPath(); data.forEach((p,i)=>{ const xx=X(p.t),yy=Y(p.dens); i?cctx.lineTo(xx,yy):cctx.moveTo(xx,yy); }); cctx.stroke();
+    cctx.shadowBlur=0;
+    // head dot
+    const last=data[data.length-1];
+    cctx.fillStyle='#eafff4'; cctx.beginPath(); cctx.arc(X(last.t),Y(last.dens),3.4*DPR,0,7); cctx.fill();
+    cctx.strokeStyle='#4ade80'; cctx.lineWidth=2*DPR; cctx.beginPath(); cctx.arc(X(last.t),Y(last.dens),5.6*DPR,0,7); cctx.stroke();
+  }
+}
+
+/* =====================================================================
+   PHASE detection
+===================================================================== */
+function updatePhase(mu, dN){
+  let ph;
+  if(S.t<0.5) ph='idle';
+  else if(S.N<14 && S.t<8) ph='lag';
+  else if(S.N>=K_CAP*0.93 || (S.si<5)) ph='stat';
+  else if(dN<-0.02) ph='death';
+  else ph='log';
+  S.phase=ph;
+  const map={ idle:['ptLag','Hazır'], lag:['ptLag','Lag fazı — hücreler uyum sağlıyor'],
+    log:['ptLog','Log fazı — üstel bölünme!'], stat:['ptStat','Durağan faz — kapasiteye ulaşıldı'],
+    death:['ptDeath','Çöküş — koşullar bozuldu'] };
+  ['ptLag','ptLog','ptStat','ptDeath'].forEach(k=>el[k].classList.remove('on'));
+  const cur=map[ph]||map.idle;
+  if(el[cur[0]]) el[cur[0]].classList.add('on');
+  el.hudPhase.textContent = cur[1];
+}
+
+/* =====================================================================
+   GAME LOOP (fixed-step sim + rAF render)
+===================================================================== */
+let lastTs=0, acc=0;
+const STEP=1/30;
+
+function startGame(){
+  if(S.running) return;
+  if(S.over) resetGame(true);
+  S.running=true; S.paused=false;
+  el.btnStart.disabled=true; el.btnPause.disabled=false;
+  el.btnStart.lastChild.textContent=' Çalışıyor';
+  loadBestCurve();
+  lastTs=0; acc=0;          // sentinel → frame() reseeds dt cleanly
+}
+function togglePause(){
+  if(!S.running) return;
+  S.paused=!S.paused;
+  el.btnPause.lastChild.textContent = S.paused?' Devam':' Duraklat';
+  if(!S.paused) lastTs=0;
+}
+function resetGame(silent){
+  const mode = S?S.mode:'free';
+  S = freshState(); S.mode=mode;
+  applyModeStart();
+  el.btnStart.disabled=false; el.btnPause.disabled=true;
+  el.btnStart.lastChild.textContent=' Başlat';
+  el.btnPause.lastChild.textContent=' Duraklat';
+  el.overlay.classList.remove('active');
+  // seed initial cells
+  for(let i=0;i<6;i++) spawnCell(null);
+  S.peakN=0;
+  updateHUD(); refreshControls(); drawPetri(); drawCurve();
+  ['ptLag','ptLog','ptStat','ptDeath'].forEach(k=>el[k].classList.remove('on'));
+  el.hudPhase.textContent="Hazır — Başlat'a bas";
+  el.limitFlag.classList.remove('show');
+  if(!silent){}
+}
+
+// ONE persistent loop. Rendering is decoupled from the sim and ALWAYS runs,
+// so a sim error can never freeze the live view again.
+function frame(ts){
+  requestAnimationFrame(frame);
+  if(!lastTs) lastTs=ts;
+  let dt=(ts-lastTs)/1000; lastTs=ts;
+  if(dt>0.1) dt=0.1;
+  if(S.running && !S.paused && !S.over){
+    acc+=dt; let n=0;
+    try{ while(acc>=STEP && n<8){ stepSim(STEP); acc-=STEP; n++; } }
+    catch(err){ console.error('stepSim hata:',err); }
+  }
+  try{ animateCells(dt); }catch(e){}
+  drawPetri(); drawCurve();
+}
+
+function stepSim(dt){
+  S.t+=dt;
+  // environment
+  const sal=+el.sSal.value, li=+el.sLight.value, te=+el.sTemp.value;
+  // self-shading: effective light drops as density rises (Beer–Lambert)
+  const dens = S.N/K_CAP;
+  const liEff = li*Math.exp(-1.0*dens);
+  const f1=fSal(sal), f2=fLight(liEff), f3=fTemp(te), f4=fSi(S.si);
+  const env=Math.min(f1,f2,f3,f4);
+  // lag ramp (first ~5s eased)
+  const lag=clamp(S.t/5,0,1); const lagE=lag*lag*(3-2*lag);
+  const mu = MU_MAX*env*lagE;
+  // logistic
+  const dN = mu*S.N*(1 - S.N/K_CAP)*dt;
+  const prevN=S.N;
+  S.N = clamp(S.N + dN, 0, K_CAP);
+  // silica consumption on growth + slow regen
+  const grew=Math.max(0,S.N-prevN);
+  S.si = clamp(S.si - grew*SI_DRAIN + SI_REGEN*dt, 0, 100);
+
+  // stats
+  S.peakN=Math.max(S.peakN,S.N);
+  const od = (S.N/K_CAP)*0.43;
+  S.maxOD=Math.max(S.maxOD,od);
+  S.sumEnv+=env; S.envSamples++;
+  S.o2 += S.N*env*dt*0.9;
+  // score: rewards healthy biomass over time (integral of env*N)
+  S.score += env*S.N*dt*3.4;
+
+  syncCells();
+  // sample curve ~ every 0.4s
+  if(S.curve.length===0 || S.t-S.curve[S.curve.length-1].t>=0.4){
+    S.curve.push({t:Math.min(S.t,RUN_TIME), dens:(S.N/K_CAP)*DENSITY_AT_K});
+  }
+  // daily scripted event
+  if(S.mode==='daily' && S.event && !S.event.fired && S.t>=S.event.at){
+    S.event.fired=true; triggerEvent(S.event);
+  }
+  updatePhase(mu*60, dN);
+  // mu shown as divisions/day-ish: scale mu(/s)→ realistic ~ up to 1.5
+  const muDay = mu* (1.5/MU_MAX);
+  updateHUD(muDay);
+  refreshControls();
+
+  if(S.t>=RUN_TIME){ endGame(); }
+}
+
+function animateCells(dt){
+  const m=dt*60;
+  for(const c of S.cells){
+    if(c.pop>0){ c.pop=Math.max(0,c.pop-dt*3.2); }
+    c.x+=c.vx*m; c.y+=c.vy*m; c.rot+=c.spin*m;
+    // keep inside circle (reflect velocity off the rim)
+    const dx=c.x-0.5, dy=c.y-0.5, dist=Math.hypot(dx,dy);
+    if(dist>0.43){
+      const nx=dx/dist, ny=dy/dist;
+      c.x=0.5+nx*0.43; c.y=0.5+ny*0.43;
+      const dot=c.vx*nx+c.vy*ny; c.vx-=2*dot*nx; c.vy-=2*dot*ny;
+    }
+  }
+}
+
+/* ---------- HUD + readouts ---------- */
+function updateHUD(muDay){
+  el.hudScore.textContent=fmt(S.score);
+  const tl=Math.max(0,Math.ceil(RUN_TIME-S.t));
+  el.hudTimerV.textContent=tl;
+  el.hudTimer.classList.toggle('warn', tl<=20&&tl>10);
+  el.hudTimer.classList.toggle('danger', tl<=10);
+  el.dDensity.textContent=fmt((S.N/K_CAP)*DENSITY_AT_K);
+  el.dOD.textContent=((S.N/K_CAP)*0.43).toFixed(3);
+  el.dMu.textContent=(muDay!==undefined?muDay: (S.running?0:0)).toFixed(2);
+  el.dCells.textContent=Math.min(Math.round(S.N),K_CAP);
+}
+
+/* ---------- daily challenge ---------- */
+function applyModeStart(){
+  if(S.mode==='daily'){
+    const seed=hashStr('diatom-'+todayKey());
+    const rng=mulberry32(seed); S.seedRng=rng;
+    // randomized but fixed-for-everyone starting sliders + one event
+    S.salBase = 4+Math.floor(rng()*26);      // 4..30
+    S.lightBase = 40+Math.floor(rng()*40)*10;  // 40..430
+    S.tempBase = 12+Math.floor(rng()*18);     // 12..30
+    S.si = 55+Math.floor(rng()*35);
+    el.sSal.value=S.salBase; el.sLight.value=S.lightBase; el.sTemp.value=S.tempBase;
+    const evTypes=[
+      {type:'heat', at:22+Math.floor(rng()*16), msg:'Sıcaklık dalgası! Sıcaklık +6°C kaydı.'},
+      {type:'fresh', at:22+Math.floor(rng()*16), msg:'Tatlı su girişi! Tuzluluk düştü.'},
+      {type:'sicrash', at:20+Math.floor(rng()*18), msg:'Silis çökmesi! Havuz yarıya indi.'}
+    ];
+    S.event=Object.assign({fired:false}, evTypes[Math.floor(rng()*evTypes.length)]);
+    el.dailyNote.innerHTML='Bugünün kodu: <b>'+todayKey()+'</b> · Herkes aynı koşullarla yarışır · Gizli olay var 👀';
+  } else {
+    el.sSal.value=10; el.sLight.value=120; el.sTemp.value=20; S.si=100;
+    el.dailyNote.textContent='';
+  }
+}
+function triggerEvent(ev){
+  if(ev.type==='heat'){ el.sTemp.value=clamp(+el.sTemp.value+6,5,35); }
+  else if(ev.type==='fresh'){ el.sSal.value=clamp(+el.sSal.value-7,1,35); }
+  else if(ev.type==='sicrash'){ S.si=S.si/2; }
+  showToast(ev.msg);
+}
+
+/* ---------- end game / scoring ---------- */
+const BASELINE=[ // baked score distribution for percentile (representative runs)
+  900,1700,2400,3000,3500,4100,4600,5200,5800,6300,6800,7300,7800,8300,8800,
+  9300,9800,10400,11000,11700,12500,13400,14500,15800,17500,19500,22000,25000,29000,34000];
+function percentile(score){
+  let below=0; for(const b of BASELINE) if(b<score) below++;
+  return clamp(Math.round(below/BASELINE.length*100),1,99);
+}
+function endGame(){
+  S.running=false; S.over=true;
+  el.btnStart.disabled=false; el.btnPause.disabled=true;
+  el.btnStart.lastChild.textContent=' Başlat';
+  el.limitFlag.classList.remove('show');
+
+  const finalScore=Math.round(S.score);
+  const peakDens=Math.round((S.peakN/K_CAP)*DENSITY_AT_K);
+  const avgEnv=S.envSamples? S.sumEnv/S.envSamples:0;
+
+  // leaderboard
+  const lbKey = S.mode==='daily'? 'diatom_lb_daily_'+todayKey() : 'diatom_lb_free';
+  const board = getBoard(lbKey);
+  const myTag = 'Diatom #'+(1000+Math.floor(Math.random()*9000));
+  const entry={tag:myTag, score:finalScore, ts:Date.now(), me:true};
+  board.forEach(b=>b.me=false);
+  board.push(entry); board.sort((a,b)=>b.score-a.score);
+  const trimmed=board.slice(0,20);
+  localStorage.setItem(lbKey, JSON.stringify(trimmed.map(b=>({tag:b.tag,score:b.score,ts:b.ts}))));
+  const rank=trimmed.findIndex(b=>b===entry)+1;
+
+  // high score + best curve
+  const hsKey='diatom_high_'+S.mode;
+  const prevHigh=+(localStorage.getItem(hsKey)||0);
+  const isRecord=finalScore>prevHigh;
+  if(isRecord){
+    localStorage.setItem(hsKey,finalScore);
+    localStorage.setItem('diatom_bestcurve_'+S.mode, JSON.stringify(S.curve));
+  }
+
+  // populate modal
+  $('mScore').textContent=fmt(finalScore);
+  $('mDensity').textContent=fmt(peakDens);
+  $('mOD').textContent=S.maxOD.toFixed(3);
+  $('mO2').textContent=fmt(S.o2)+' fmol';
+  $('mRecord').style.display=isRecord?'inline-flex':'none';
+  const pc=percentile(finalScore);
+  $('mPctTxt').innerHTML='Koşuların <b>%'+pc+"</b>'ini geçtin · Sıralama: <b>#"+rank+'</b>';
+  setTimeout(()=>$('mPctFill').style.width=pc+'%',60);
+
+  // contextual tip = weakest factor
+  const f={Tuzluluk:fSal(+el.sSal.value),'Işık':fLight(+el.sLight.value),'Sıcaklık':fTemp(+el.sTemp.value)};
+  let weak='Tuzluluk',wv=2; for(const k in f) if(f[k]<wv){wv=f[k];weak=k;}
+  let tip;
+  if(avgEnv>0.82) tip='<b>Mükemmel denge!</b> Tüm faktörleri optimuma yakın tuttun — diatomlar tam kapasite bölündü.';
+  else if(S.maxOD<0.15) tip='<b>İpucu:</b> Kültür zayıf kaldı. En çok <b>'+weak+'</b> seni sınırladı — onu optimuma çek.';
+  else tip='<b>Fena değil!</b> Daha yükseğe çıkmak için <b>'+weak+'</b> faktörünü iyileştir ve silis bitmeden bölünmeyi sürdür.';
+  $('mTip').innerHTML=tip;
+
+  $('mTitle').textContent = S.mode==='daily'?'Günlük Sonuç':'Kültür Hasadı';
+  el.overlay.classList.add('active');
+  renderBoard();
+}
+
+/* ---------- leaderboard storage ---------- */
+function getBoard(key){ try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; } }
+let lbView='free';
+function renderBoard(){
+  const key = lbView==='daily'? 'diatom_lb_daily_'+todayKey() : 'diatom_lb_free';
+  const board=getBoard(key).slice(0,10);
+  const list=$('lbList');
+  if(!board.length){ list.innerHTML='<div class="lb-empty">Henüz skor yok — ilk sen ol! 🌱</div>'; return; }
+  // mark most recent "me" by ts (last inserted) — approx
+  const maxTs=Math.max(...board.map(b=>b.ts||0));
+  list.innerHTML=board.map((b,i)=>{
+    const cls=['','gold','silver','bronze'][i+1]||'';
+    const me=(b.ts===maxTs)?'me':'';
+    return `<div class="lb-row ${cls} ${me}"><span class="rank">${i+1}</span><span class="tag">${b.tag}</span><span class="sc mono">${fmt(b.score)}</span></div>`;
+  }).join('');
+}
+
+/* ---------- toast ---------- */
+let toastTimer=null;
+function showToast(msg){
+  el.toastTxt.textContent=msg; el.toast.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.toast.classList.remove('show'),2600);
+}
+
+/* =====================================================================
+   EVENTS / WIRING
+===================================================================== */
+[el.sSal,el.sLight,el.sTemp].forEach(s=>s.addEventListener('input',refreshControls));
+el.siBtn.addEventListener('click',()=>{
+  if(!S||S.siDoses<=0||S.si>92) return;
+  S.si=clamp(S.si+40,0,100); S.siDoses--;
+  showToast('Silis eklendi (+40%). Kalan doz: '+S.siDoses);
+  refreshControls();
+});
+el.btnStart.addEventListener('click',startGame);
+el.btnPause.addEventListener('click',togglePause);
+el.btnReset.addEventListener('click',()=>resetGame());
+$('mReplay').addEventListener('click',()=>{ resetGame(); startGame(); });
+$('mClose').addEventListener('click',()=>el.overlay.classList.remove('active'));
+
+// mode tabs
+$('modeFree').addEventListener('click',()=>setMode('free'));
+$('modeDaily').addEventListener('click',()=>setMode('daily'));
+function setMode(m){
+  $('modeFree').classList.toggle('active',m==='free');
+  $('modeDaily').classList.toggle('active',m==='daily');
+  S.mode=m; resetGame();
+  lbView=m; syncLbTabs(); renderBoard();
+}
+// leaderboard tabs
+$('lbFree').addEventListener('click',()=>{lbView='free';syncLbTabs();renderBoard();});
+$('lbDaily').addEventListener('click',()=>{lbView='daily';syncLbTabs();renderBoard();});
+function syncLbTabs(){ $('lbFree').classList.toggle('active',lbView==='free'); $('lbDaily').classList.toggle('active',lbView==='daily'); }
+
+// keyboard: space start/pause
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space' && e.target.tagName!=='INPUT'){ e.preventDefault(); S.running?togglePause():startGame(); }
+});
+
+/* ---------- boot ---------- */
+S=freshState();
+sizeAll();
+resetGame(true);
+renderBoard();
+requestAnimationFrame(frame);   // persistent render+sim loop (always running)
+</script>
+</body>
+</html>
